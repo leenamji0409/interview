@@ -93,6 +93,22 @@ details summary{cursor:pointer;font-weight:700;padding:4px 0}
 .t6 .k{font-size:12px}.t6 .v{font-size:15px;line-height:1.3}.t6 .n{display:none}
 @media(max-width:900px){.t6{grid-template-columns:repeat(3,1fr)}}
 
+@media(max-width:760px){
+header{padding:0 14px;height:56px}.chips .chip.gray{display:none}
+.screen{padding:14px}.card{padding:16px 16px}h1{font-size:22px}
+#s-practice{height:auto;min-height:0;padding:12px 14px}
+.p-main{flex-direction:column;gap:12px}
+.p-left,.p-right{flex:none;width:100%;min-width:0}
+.qtext{font-size:20px}
+.cam{flex:none;min-height:0;aspect-ratio:4/3}
+.tcard{min-height:180px;overflow:visible}
+#transcript{font-size:17px;min-height:80px;max-height:240px}
+.t6{grid-template-columns:repeat(2,1fr)}
+.cards3{flex-direction:column}.cards3>.card{flex:none!important;width:100%}
+.btn{height:48px}
+table{font-size:13px}th,td{padding:8px 6px}
+.tabs{flex-direction:column}
+}
 .tabs{display:flex;gap:8px;margin-bottom:14px}
 .tab{flex:1;height:46px;border-radius:10px;border:1px solid #DAD6CC;background:#fff;color:#1B2733;font-size:15px;font-weight:500}
 .tab.on{background:#2C4A7A;border-color:#2C4A7A;color:#fff;font-weight:700}
@@ -1041,7 +1057,8 @@ function startRecognition(){
   if(!SR){useManual('이 브라우저는 음성 인식을 지원하지 않아 직접 입력으로 답변합니다.');return}
   S.stopping=false;
   var rec=new SR();S.rec=rec;
-  rec.lang='ko-KR';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
+  var mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  rec.lang='ko-KR';rec.continuous=!mobile;rec.interimResults=true;rec.maxAlternatives=1;
   rec.onresult=function(e){
     var interim='';
     for(var i=e.resultIndex;i<e.results.length;i++){
@@ -1112,13 +1129,16 @@ function beginAnswer(){
   S.phase='answering';S.answerStart=Date.now();S.poseAgg=newPoseAgg();
   $('btnMain').textContent='답변 완료';
   beep();startRecognition();
+  clearTimeout(S.silentTimer);S.silentTimer=setTimeout(function(){
+    if(S.phase==='answering'&&!currentText()){$('readState').textContent='음성이 인식되지 않습니다. 아래 \'직접 입력\'에 답변을 적어도 됩니다.';$('manual').classList.remove('hidden')}
+  },6000);
   clearInterval(S.timerId);
   S.timerId=setInterval(function(){updateTiles();if(elapsed()>=limitSec())finishAnswer()},250);
 }
 function finishAnswer(){
   if(S.phase!=='answering')return;
   var sec=elapsed();
-  S.phase='done';clearInterval(S.timerId);stopRecognition();
+  S.phase='done';clearInterval(S.timerId);clearTimeout(S.silentTimer);stopRecognition();
   var item=S.items[S.order[S.idx]];
   var ev=evaluateAnswer(item,currentText(),sec,limitSec(),S.segs,{structure:$('optStruct').checked,majorKw:S.major?S.major.kws:null,majorName:S.major?S.major.name:'',pose:S.poseState==='ready'?summarizePose(S.poseAgg):{ok:false,off:true,state:S.poseState}});
   ev.q=item.q;ev.model=item.a||'';ev.ref=item.ref||'';ev.tag=item.tag||'';ev.major=ev.major||null;ev.no=S.idx+1;
